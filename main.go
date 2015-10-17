@@ -80,7 +80,8 @@ func main() {
 			break
 		}
 		if strings.Contains(line, ":2 D 0 0") {
-			str, err := decode(line)
+			//remove the two hidden characters at the end of the line
+			str, err := decode(line[:len(line)-2])
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				continue
