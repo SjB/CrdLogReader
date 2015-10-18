@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
@@ -23,27 +24,57 @@ func exitOnError(err error) {
 	}
 }
 
-func decode(v string) (string, error) {
+func fetchRawData(v string) string {
 	slice := strings.Split(v, "2 D 0 0 6")
-	if len(slice) > 1 {
-		if len(slice[1]) == 0 {
-			return "", errors.New("Empty line")
+	return slice[len(slice)-1]
+}
+
+func convertHexToASCII(v string) (string, error) {
+	hex := bytes.NewBufferString(v)
+	ascii := bytes.Buffer{}
+	var d byte
+	for {
+		_, err := fmt.Fscanf(hex, " %X", &d)
+
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return "", err
 		}
 
-		var d byte
-		enc := bytes.NewBufferString(slice[1])
-		dec := bytes.Buffer{}
-		for {
-			_, err := fmt.Fscanf(enc, " %X", &d)
-			_ = dec.WriteByte(d)
-			if err != nil {
-				break
-			}
-
+		err = ascii.WriteByte(d)
+		if err != nil {
+			return "", err
 		}
-		return string(dec.Bytes()), nil
 	}
-	return "", errors.New("Bad format")
+	return string(ascii.Bytes()), nil
+}
+
+func decode(v string) ([]string, error) {
+
+	data := fetchRawData(v)
+
+	if len(data) <= 2 {
+		return nil, errors.New("Empty line")
+	}
+
+	data, err := convertHexToASCII(data)
+	if err != nil {
+		return nil, errors.New("Bad format")
+	}
+
+	//remove the two hidden characters at the end of the line
+	if byte(data[len(data)-1]) == 0x0 {
+		data = data[:len(data)-1]
+	}
+
+	if byte(data[len(data)-1]) == 0x4E {
+		data = data[:len(data)-1]
+	}
+
+	delim := 0x1C
+	field := strings.Split(data, string(delim))
+	return field, nil
 }
 
 func readLine(reader *bufio.Reader) (string, error) {
@@ -74,27 +105,26 @@ func main() {
 	defer stream.Close()
 
 	reader := bufio.NewReader(stream)
+	i := 0
 	for {
 		line, err := readLine(reader)
 		if err != nil {
 			break
 		}
 		if strings.Contains(line, ":2 D 0 0") {
-			//remove the two hidden characters at the end of the line
-			str, err := decode(line[:len(line)-2])
+			i++
+			fields, err := decode(line)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				continue
 			}
-			del := str[3]
-			field := strings.Split(str, string(del))
 
-			fmt.Println("------")
-			fmt.Println(field[0])
-			for _, v := range field[1:] {
+			fmt.Println(i, ": ------")
+			fmt.Println(fields[0])
+			for _, v := range fields[1:] {
 				fmt.Println("[FS]", v)
 			}
-			fmt.Println("------")
+			fmt.Println(i, ": ------")
 		}
 	}
 }
