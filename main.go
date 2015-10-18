@@ -17,6 +17,7 @@ func init() {
 	flag.StringVar(&filename, "f", "", "Specify the CrdLog.log file to read")
 }
 
+// helper function to exit application with a message to Stderr.
 func exitOnError(err error) {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -24,11 +25,13 @@ func exitOnError(err error) {
 	}
 }
 
+// parse the line and return only the response of the transaction.
 func fetchRawData(v string) string {
 	slice := strings.Split(v, "2 D 0 0 6")
 	return slice[len(slice)-1]
 }
 
+// convert the hex value of the response into it's string representation
 func convertHexToASCII(v string) (string, error) {
 	hex := bytes.NewBufferString(v)
 	ascii := bytes.Buffer{}
@@ -50,6 +53,8 @@ func convertHexToASCII(v string) (string, error) {
 	return string(ascii.Bytes()), nil
 }
 
+// decode take a line from the CrdtLog.Log file and parse the reponse
+// into a human readable format
 func decode(v string) ([]string, error) {
 
 	data := fetchRawData(v)
@@ -77,6 +82,7 @@ func decode(v string) ([]string, error) {
 	return field, nil
 }
 
+// readLine break the file stream into line of
 func readLine(reader *bufio.Reader) (string, error) {
 	line, err := reader.ReadString('\n')
 	lLen := len(line)
