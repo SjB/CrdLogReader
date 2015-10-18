@@ -82,8 +82,8 @@ func decode(v string) ([]string, error) {
 	return field, nil
 }
 
-// readLine break the file stream into line of
-func readLine(reader *bufio.Reader) (string, error) {
+// readNextLine break the file stream into line of
+func readNextLine(reader *bufio.Reader) (string, error) {
 	line, err := reader.ReadString('\n')
 	lLen := len(line)
 
@@ -113,7 +113,7 @@ func main() {
 	reader := bufio.NewReader(stream)
 	i := 0
 	for {
-		line, err := readLine(reader)
+		line, err := readNextLine(reader)
 		if err != nil {
 			break
 		}
